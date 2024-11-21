@@ -32,6 +32,20 @@ typedef struct
     gboolean circular;
 } button;
 
+enum
+{
+    MARGIN_TOP,
+    MARGIN_BOTTOM,
+    MARGIN_LEFT,
+    MARGIN_RIGHT,
+
+    /*
+     * The total number of margin values. This must be defined last in the
+     * enum.
+     */
+    MARGIN_MAX
+};
+
 static const int default_size = 100;
 static char *command = NULL;
 static char *layout_path = NULL;
@@ -44,7 +58,7 @@ static int num_of_monitors = 0;
 static GtkWindow **window = NULL;
 static int buttons_per_row = 3;
 static int primary_monitor = -1;
-static int margin[] = {230, 230, 230, 230};
+static int margin[MARGIN_MAX] = {230, 230, 230, 230};
 static int space[] = {0, 0};
 static gboolean show_bind = FALSE;
 static gboolean no_span = FALSE;
@@ -106,22 +120,21 @@ static gboolean process_args(int argc, char *argv[])
         switch (c)
         {
         case 'm':
-            margin[0] = atoi(optarg);
-            margin[1] = atoi(optarg);
-            margin[2] = atoi(optarg);
-            margin[3] = atoi(optarg);
+            int m = atoi(optarg);
+            for (int i = 0; i < MARGIN_MAX; i++)
+                margin[i] = m;
             break;
         case 'L':
-            margin[2] = atoi(optarg);
+            margin[MARGIN_LEFT] = atoi(optarg);
             break;
         case 'T':
-            margin[0] = atoi(optarg);
+            margin[MARGIN_TOP] = atoi(optarg);
             break;
         case 'B':
-            margin[1] = atoi(optarg);
+            margin[MARGIN_BOTTOM] = atoi(optarg);
             break;
         case 'R':
-            margin[3] = atoi(optarg);
+            margin[MARGIN_RIGHT] = atoi(optarg);
             break;
         case 'c':
             space[1] = atoi(optarg);
@@ -631,10 +644,10 @@ static void load_buttons(GtkContainer *container)
     gtk_grid_set_row_spacing(GTK_GRID(grid), space[0]);
     gtk_grid_set_column_spacing(GTK_GRID(grid), space[1]);
 
-    gtk_widget_set_margin_top(grid, margin[0]);
-    gtk_widget_set_margin_bottom(grid, margin[1]);
-    gtk_widget_set_margin_start(grid, margin[2]);
-    gtk_widget_set_margin_end(grid, margin[3]);
+    gtk_widget_set_margin_top(grid, margin[MARGIN_TOP]);
+    gtk_widget_set_margin_bottom(grid, margin[MARGIN_BOTTOM]);
+    gtk_widget_set_margin_start(grid, margin[MARGIN_LEFT]);
+    gtk_widget_set_margin_end(grid, margin[MARGIN_RIGHT]);
 
     int num_col = 0;
     if ((num_buttons % buttons_per_row) == 0)
