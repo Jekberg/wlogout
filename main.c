@@ -58,6 +58,15 @@ enum
     SPACING_MAX,
 };
 
+static const char *margin_names[MARGIN_MAX] = {[MARGIN_TOP] = "top margin",
+                                               [MARGIN_BOTTOM] =
+                                                   "bottom margin",
+                                               [MARGIN_LEFT] = "left margin",
+                                               [MARGIN_RIGHT] = "right margin"};
+
+static const char *space_names[MARGIN_MAX] = {
+    [SPACING_ROW] = "row spacing", [SPACING_COLUMN] = "column spacing"};
+
 #define DEFAULT_SIZE 100
 
 static char *command = NULL;
@@ -103,7 +112,7 @@ static const char *help =
     "   -l, --layout </path/to/layout>  Specify a layout file\n"
     "   -v, --version                   Show version number and stop\n"
     "   -C, --css </path/to/css>        Specify a css file\n"
-    "   -b, --buttons-per-row <0-x>     Set the number of buttons per row\n"
+    "   -b, --buttons-per-row <1-x>     Set the number of buttons per row\n"
     "   -c  --column-spacing <0-x>      Set space between buttons columns\n"
     "   -r  --row-spacing <0-x>         Set space between buttons rows\n"
     "   -m, --margin <0-x>              Set margin around buttons\n"
@@ -117,6 +126,19 @@ static const char *help =
     "   -n, --no-span                   Stops from spanning across "
     "multiple monitors\n"
     "   -P, --primary-monitor <0-x>     Set the primary monitor\n";
+
+static gboolean parse_numarg(const char *str, int *nump)
+{
+    /*
+     * sscanf() will successfully parse an integer from a string if there are
+     * trailing non-nummeric characters. We can check that the entire string
+     * looks like a number if there is no extra trailing characters not parsed
+     * by "%d". So we expect sscanf to parse exactly 1 argument from the
+     * format.
+     */
+    char garbage;
+    return sscanf(str, "%d%c", nump, &garbage) == 1;
+}
 
 static gboolean process_args(int argc, char *argv[])
 {
@@ -133,27 +155,63 @@ static gboolean process_args(int argc, char *argv[])
         switch (c)
         {
         case 'm':
-            int m = atoi(optarg);
+            int m;
+            if (!parse_numarg(optarg, &m))
+            {
+                g_print("margin %s is not a number\n", optarg);
+                return TRUE;
+            }
+
             for (int i = 0; i < MARGIN_MAX; i++)
                 margin[i] = m;
             break;
         case 'L':
-            margin[MARGIN_LEFT] = atoi(optarg);
+            if (!parse_numarg(optarg, &margin[MARGIN_LEFT]))
+            {
+                g_print("%s %s is not a number\n", margin_names[MARGIN_LEFT],
+                        optarg);
+                return TRUE;
+            }
             break;
         case 'T':
-            margin[MARGIN_TOP] = atoi(optarg);
+            if (!parse_numarg(optarg, &margin[MARGIN_TOP]))
+            {
+                g_print("%s %s is not a number\n", margin_names[MARGIN_TOP],
+                        optarg);
+                return TRUE;
+            }
             break;
         case 'B':
-            margin[MARGIN_BOTTOM] = atoi(optarg);
+            if (!parse_numarg(optarg, &margin[MARGIN_BOTTOM]))
+            {
+                g_print("%s %s is not a number\n", margin_names[MARGIN_BOTTOM],
+                        optarg);
+                return TRUE;
+            }
             break;
         case 'R':
-            margin[MARGIN_RIGHT] = atoi(optarg);
+            if (!parse_numarg(optarg, &margin[MARGIN_RIGHT]))
+            {
+                g_print("%s %s is not a number\n", margin_names[MARGIN_RIGHT],
+                        optarg);
+                return TRUE;
+            }
             break;
         case 'c':
-            space[SPACING_COLUMN] = atoi(optarg);
+            if (!parse_numarg(optarg, &space[SPACING_COLUMN]))
+            {
+                g_print("%s %s is not a number\n", space_names[SPACING_COLUMN],
+                        optarg);
+                return TRUE;
+            }
             break;
         case 'r':
-            space[SPACING_ROW] = atoi(optarg);
+            if (!parse_numarg(optarg, &space[SPACING_ROW]))
+            {
+                g_print("%s %s is not a number\n", space_names[SPACING_ROW],
+                        optarg);
+                return TRUE;
+            }
             break;
         case 'l':
             layout_path = g_strdup(optarg);
@@ -165,7 +223,11 @@ static gboolean process_args(int argc, char *argv[])
             css_path = g_strdup(optarg);
             break;
         case 'b':
-            buttons_per_row = atoi(optarg);
+            if (!parse_numarg(optarg, &buttons_per_row))
+            {
+                g_print("buttons per row %s is not a number\n", optarg);
+                return TRUE;
+            }
             break;
         case 'p':
             if (strcmp("layer-shell", optarg) == 0)
@@ -186,7 +248,11 @@ static gboolean process_args(int argc, char *argv[])
             show_bind = TRUE;
             break;
         case 'P':
-            primary_monitor = atoi(optarg);
+            if (!parse_numarg(optarg, &primary_monitor))
+            {
+                g_print("pparimary monitor %s is not a number\n", optarg);
+                return TRUE;
+            }
             break;
         case 'n':
             no_span = TRUE;
@@ -198,6 +264,36 @@ static gboolean process_args(int argc, char *argv[])
             return TRUE;
         }
     }
+
+    /*
+     * Before resuming, validate that the arguments make sense. Otherwise we
+     * will encounter failures during the run.
+     */
+
+    if (buttons_per_row < 1)
+    {
+        g_print("The number of buttons per row cannot be less than 1\n");
+        return TRUE;
+    }
+
+    for (int i = 0; i < MARGIN_MAX; i++)
+    {
+        if (margin[i] < 0)
+        {
+            g_print("%s cannot be a negative number\n", margin_names[i]);
+            return TRUE;
+        }
+    }
+
+    for (int i = 0; i < SPACING_MAX; i++)
+    {
+        if (space[i] < 0)
+        {
+            g_print("%s cannot be a negative number\n", space_names[i]);
+            return TRUE;
+        }
+    }
+
     return FALSE;
 }
 
