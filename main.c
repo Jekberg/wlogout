@@ -201,13 +201,18 @@ static gboolean process_args(int argc, char *argv[])
     return FALSE;
 }
 
+static void abort_if(gboolean condition, const char *message)
+{
+    if (!condition)
+        return;
+    fprintf(stderr, "%s\n", message);
+    exit(EXIT_FAILURE);
+}
+
 static gboolean get_layout_path()
 {
     char *buf = malloc(DEFAULT_SIZE * sizeof(char));
-    if (!buf)
-    {
-        fprintf(stderr, "Failed to allocate memory\n");
-    }
+    abort_if(!buf, error_nomem);
 
     char *tmp = getenv("XDG_CONFIG_HOME");
     char *config_path = g_strdup(tmp);
@@ -219,6 +224,7 @@ static gboolean get_layout_path()
         {
             free(buf);
             buf = malloc((DEFAULT_SIZE * sizeof(char)) + (sizeof(char) * n));
+            abort_if(!buf, error_nomem);
             snprintf(buf, (DEFAULT_SIZE * sizeof(char)) + (sizeof(char) * n),
                      "%s/.config", config_path);
         }
@@ -230,6 +236,7 @@ static gboolean get_layout_path()
     {
         free(buf);
         buf = malloc((DEFAULT_SIZE * sizeof(char)) + (sizeof(char) * n));
+        abort_if(!buf, error_nomem);
         snprintf(buf, (DEFAULT_SIZE * sizeof(char)) + (sizeof(char) * n),
                  "%s/wlogout/layout", config_path);
     }
@@ -268,10 +275,7 @@ static gboolean get_layout_path()
 static gboolean get_css_path()
 {
     char *buf = malloc(DEFAULT_SIZE * sizeof(char));
-    if (!buf)
-    {
-        fprintf(stderr, "Failed to allocate memory\n");
-    }
+    abort_if(!buf, error_nomem);
 
     char *tmp = getenv("XDG_CONFIG_HOME");
     char *config_path = g_strdup(tmp);
@@ -283,6 +287,7 @@ static gboolean get_css_path()
         {
             free(buf);
             buf = malloc((DEFAULT_SIZE * sizeof(char)) + (sizeof(char) * n));
+            abort_if(!buf, error_nomem);
             snprintf(buf, (DEFAULT_SIZE * sizeof(char)) + (sizeof(char) * n),
                      "%s/.config", config_path);
         }
@@ -294,6 +299,7 @@ static gboolean get_css_path()
     {
         free(buf);
         buf = malloc((DEFAULT_SIZE * sizeof(char)) + (sizeof(char) * n));
+        abort_if(!buf, error_nomem);
         snprintf(buf, (DEFAULT_SIZE * sizeof(char)) + (sizeof(char) * n),
                  "%s/wlogout/style.css", config_path);
     }
@@ -356,6 +362,7 @@ static gboolean get_buttons(FILE *json)
     rewind(json);
 
     char *buffer = malloc(length);
+    abort_if(!buffer, error_nomem);
     if (!buffer)
     {
         g_warning("Failed to allocate memory\n");
@@ -365,12 +372,8 @@ static gboolean get_buttons(FILE *json)
 
     jsmn_parser p;
     jsmntok_t *tok = malloc(DEFAULT_SIZE * sizeof(jsmntok_t));
-    if (!tok)
-    {
-        free(buffer);
-        g_warning("Failed to allocate memory\n");
-        return TRUE;
-    }
+    abort_if(!tok, error_nomem);
+
     jsmn_init(&p);
     int numtok, i = 1;
     do
@@ -427,6 +430,7 @@ static gboolean get_buttons(FILE *json)
                 get_substring(buf, tok[i].start, tok[i].end, buffer);
                 buttons[num_buttons - 1].label =
                     malloc(sizeof(char) * (length + 1));
+                abort_if(!buttons[num_buttons - 1].label, error_nomem);
                 strcpy(buttons[num_buttons - 1].label, buf);
             }
             else if (strcmp(tmp, "action") == 0)
@@ -435,6 +439,7 @@ static gboolean get_buttons(FILE *json)
                 get_substring(buf, tok[i].start, tok[i].end, buffer);
                 buttons[num_buttons - 1].action =
                     malloc(sizeof(char) * length + 1);
+                abort_if(!buttons[num_buttons - 1].action, error_nomem);
                 strcpy(buttons[num_buttons - 1].action, buf);
             }
             else if (strcmp(tmp, "text") == 0)
@@ -446,6 +451,7 @@ static gboolean get_buttons(FILE *json)
                 int keybind_buffer = sizeof(guint) + (sizeof(char) * 2);
                 buttons[num_buttons - 1].text =
                     malloc((sizeof(char) * (length + 1)) + keybind_buffer);
+                abort_if(!buttons[num_buttons - 1].text, error_nomem);
                 strcpy(buttons[num_buttons - 1].text, buf);
             }
             else if (strcmp(tmp, "keybind") == 0)
@@ -524,6 +530,7 @@ static gboolean get_buttons(FILE *json)
 static void execute(GtkWidget *widget, char *action)
 {
     command = malloc(strlen(action) * sizeof(char) + 1);
+    abort_if(!command, error_nomem);
     strcpy(command, action);
     gtk_widget_destroy(gtk_window);
     for (int i = 0; i < num_of_monitors; i++)
@@ -612,8 +619,11 @@ static void get_monitor(GtkWidget *widget, GdkEventKey *event, gpointer data)
         display, gtk_widget_get_window(gtk_window));
     num_of_monitors = gdk_display_get_n_monitors(display);
     window = malloc(num_of_monitors * sizeof(GtkWindow *));
+    abort_if(!window, error_nomem);
     GtkWidget **box = malloc(num_of_monitors * sizeof(GtkWidget *));
+    abort_if(!box, error_nomem);
     GdkMonitor **monitors = malloc(num_of_monitors * sizeof(GdkMonitor *));
+    abort_if(!monitors, error_nomem);
 
     for (int i = 0; i < num_of_monitors; i++)
     {
